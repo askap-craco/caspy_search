@@ -6,6 +6,8 @@ from Cands_handler import Cands_handler
 import numpy as np
 import argparse, os
 import logging
+import matplotlib.pyplot as plt
+
 
 def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
     f = F(fil_name)
@@ -17,15 +19,26 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
 
     for iblock, block in enumerate(f.yield_block(nt)):
         logging.info(f"Processing block {iblock}")
+        #plt.figure()
+        #plt.imshow(block, aspect='auto', interpolation='None')
+        #plt.title("Raw block")
 
         logging.debug(f"Normalising the block")
         normed_block = norm.mad_norm(block)
+        #plt.figure()
+        #plt.imshow(normed_block, aspect='auto', interpolation='None')
+        #plt.title("Normed block")
 
         logging.debug("Cleaning the block")
         cleaned_block = rfi_m.clean_block(normed_block)
+        #plt.figure()
+        #plt.imshow(cleaned_block, aspect='auto', interpolation='None')
+        #plt.title("Cleaned block")
 
         logging.debug("Dedispersing the block")
         dd_block = dd.get_full_DMT(cleaned_block)
+        #plt.figure()
+        #plt.imshow(dd_block, aspect='auto', interpolation='None')
 
         logging.debug("Running boxcar and threshold")
         cands = bt.boxcar_and_threshold(dd_block, threshold=threshold)
@@ -33,6 +46,7 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
         logging.debug(f"Got {len(cands)} cands in block {iblock}.")
         logging.debug(f"Writing the cands to {candfile}")
         ch.write_cands(cands)
+        #plt.show()
 
     logging.info("Closing cand file")
     ch.f.close()
