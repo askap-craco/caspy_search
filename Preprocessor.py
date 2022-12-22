@@ -69,8 +69,8 @@ class RFI_mitigator:
         for ichunk, chunk in enumerate(self.get_chunk(block)):
             chan_mask = self.get_mask(chunk.std(axis=1))
             chunk[chan_mask, :] = 0
-            time_mask = self.get_mask(chunk.std(axis=0))
-            chunk[:,time_mask] = 0
+            #time_mask = self.get_mask(chunk.std(axis=0))
+            #chunk[:,time_mask] = 0
 
             if ichunk ==0:
                 cleaned_block = chunk.copy()
