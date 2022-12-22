@@ -11,7 +11,15 @@ class Dedisperser:
 
         self.fdmt = Fdmt(fmin, df, nf, max_dm, nt)
         self.summed_dmt_out = np.zeros((max_dm, max_dm + nt))
-    
+
+        self.nsamps_summed = self.get_nsamps_summed()
+
+    def get_nsamps_summed(self):
+        mock_fdmt = Fdmt(self.fmin, self.df, self.nf, self.max_dm, self.max_dm + 1)
+        mock_data = np.ones((self.nf, self.max_dm + 1))
+        mock_dmt = mock_fdmt(mock_data)
+        return mock_dmt[:, self.max_dm]
+
     def get_single_block_DMT(self, block):
         dmt_out = self.fdmt(block)
         return dmt_out
@@ -30,7 +38,7 @@ class Dedisperser:
         dmt_single = self.get_single_block_DMT(block)
         self.overlap_and_sum(dmt_single)
 
-        return self.summed_dmt_out[:, :self.nt] / np.sqrt(self.nf)
+        return self.summed_dmt_out / np.sqrt(self.nsamps_summed)[:, None]
 
 
 
