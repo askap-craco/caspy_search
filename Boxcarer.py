@@ -9,7 +9,7 @@ class Boxcar_and_threshold:
         self.nt = nt
         self.boxcar_history = boxcar_history
 
-    def boxcar_and_threshold(self, dmt_out, threshold=10):
+    def boxcar_and_threshold(self, dmt_out, threshold, dm_boxcar_norm_factors, iblock):
         candidates = []
 
         for idm in range(self.ndm):
@@ -28,12 +28,13 @@ class Boxcar_and_threshold:
                         inv = self.boxcar_history[idm, -ibox]
 
                     bcsum += inv
-                    snr = bcsum / np.sqrt(ibox + 1)
+                    #snr = bcsum / np.sqrt(ibox + 1)
+                    snr = bcsum / dm_boxcar_norm_factors[idm, ibox]
 
                     if snr >= threshold:
 
                         if best_snr is None or snr > best_snr:
-                            best_cand = [snr, ibox, idm, it]
+                            best_cand = [snr, ibox, idm, it + iblock * self.nt]
                             best_snr = snr
                         else:
                             ngroup += 1
