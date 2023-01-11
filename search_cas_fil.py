@@ -15,6 +15,7 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
     rfi_m = RFI_mitigator(cleaning_chunk=128)
     dd = Dedisperser(fmin = f.fbottom, df = f.df, nf = f.nchans, max_dm=max_dm, nt = nt)
     bt = Boxcar_and_threshold(nt = nt, boxcar_history=np.zeros((max_dm, max_boxcar)))
+    dm_boxcar_norm_factors = dd.get_rms_normalising_factor(max_boxcar)
     ch = Cands_handler(outname = candfile)
 
     for iblock, block in enumerate(f.yield_block(nt)):
@@ -41,7 +42,7 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
         #plt.imshow(dd_block, aspect='auto', interpolation='None')
 
         logging.debug("Running boxcar and threshold")
-        cands = bt.boxcar_and_threshold(dd_block, threshold=threshold)
+        cands = bt.boxcar_and_threshold(dd_block, threshold=threshold, dm_boxcar_norm_factors=dm_boxcar_norm_factors, iblock = iblock)
 
         logging.debug(f"Got {len(cands)} cands in block {iblock}.")
         logging.debug(f"Writing the cands to {candfile}")
