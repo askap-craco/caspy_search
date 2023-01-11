@@ -20,6 +20,13 @@ class Dedisperser:
         mock_dmt = mock_fdmt(mock_data)
         return mock_dmt[:, self.max_dm]
 
+    def get_rms_normalising_factor(self, max_boxcar):
+        eff_var = np.zeros([self.max_dm, max_boxcar])
+        for idm in range(self.max_dm):
+            for ibox in range(max_boxcar):
+                eff_var[idm, ibox] = self.fdmt.get_eff_var_recursive(idm, ibox+1)
+        return eff_var**0.5
+
     def get_single_block_DMT(self, block):
         dmt_out = self.fdmt(block)
         return dmt_out
@@ -38,7 +45,7 @@ class Dedisperser:
         dmt_single = self.get_single_block_DMT(block)
         self.overlap_and_sum(dmt_single)
 
-        return self.summed_dmt_out / np.sqrt(self.nsamps_summed)[:, None]
+        return self.summed_dmt_out #/ np.sqrt(self.nsamps_summed)[:, None]
 
 
 
