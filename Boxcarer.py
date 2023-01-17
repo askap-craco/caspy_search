@@ -1,6 +1,60 @@
 import numpy as np
 import logging
+from numba import jit, int32, float64
+from numba.experimental import jitclass
+'''
+spec = [
+    ('ndm', int32),
+    ('nbox', int32),
+    ('nt', int32),
+    ('boxcar_history', float64[:, :]),
+    ('dmt_out', float64[:, :]),
+    ('threshold', int32),
+    ('dm_boxcar_norm_factors', float64[:, :]),
+    ('iblock', int32)
+]
+'''
 
+@jit(nopython=True)
+def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, ndm, nbox, nt, boxcar_history):
+    candidates = np.zeros((ndm * nt, 5), dtype=np.float64) 
+    cands_recorded = 0
+    for idm in range(ndm):
+        for it in range(nt):
+            bcsum = 0
+            best_cand = np.zeros(5, dtype=np.float64)
+            best_snr = None
+            ngroup = 0
+            for ibox in range(nbox):
+                if it >= ibox:
+                    inv = dmt_out[idm, it - ibox]
+                else:
+                    inv = boxcar_history[idm, -ibox]
+                bcsum = bcsum + inv
+                #snr = bcsum / np.sqrt(ibox + 1)
+                snr = bcsum / dm_boxcar_norm_factors[idm, ibox]
+                if snr >= threshold:
+                    if best_snr is None or snr > best_snr:
+                        best_cand[0] = snr
+                        best_cand[1] = ibox
+                        best_cand[2] = idm
+                        best_cand[3] = it * iblock * nt
+                        #best_cand = [snr, ibox, idm, it + iblock * self.nt]
+                        best_snr = snr
+                    else:
+                        ngroup = ngroup + 1
+                    
+            if best_cand is not None:
+                #best_cand.extend([ngroup])
+                best_cand[4] = ngroup
+                #candidates.append(best_cand)
+                candidates[cands_recorded] = best_cand
+                cands_recorded = cands_recorded + 1
+    
+    return candidates
+
+
+#@jitclass(spec)
 class Boxcar_and_threshold:
     def __init__(self, nt, boxcar_history):
         ndm, nbox = boxcar_history.shape
@@ -9,43 +63,12 @@ class Boxcar_and_threshold:
         self.nt = nt
         self.boxcar_history = boxcar_history
 
+    #@jit(nopython=True)
     def boxcar_and_threshold(self, dmt_out, threshold, dm_boxcar_norm_factors, iblock):
-        candidates = []
-
-        for idm in range(self.ndm):
-            for it in range(self.nt):
-
-                bcsum = 0
-                best_cand = None
-                best_snr = None
-                ngroup = 0
-
-                for ibox in range(self.nbox):
-
-                    if it >= ibox:
-                        inv = dmt_out[idm, it - ibox]
-                    else:
-                        inv = self.boxcar_history[idm, -ibox]
-
-                    bcsum += inv
-                    #snr = bcsum / np.sqrt(ibox + 1)
-                    snr = bcsum / dm_boxcar_norm_factors[idm, ibox]
-
-                    if snr >= threshold:
-
-                        if best_snr is None or snr > best_snr:
-                            best_cand = [snr, ibox, idm, it + iblock * self.nt]
-                            best_snr = snr
-                        else:
-                            ngroup += 1
-                        
-                if best_cand is not None:
-                    best_cand.append(ngroup)
-                    candidates.append(best_cand)
-
+        candidates = do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, self.ndm, self.nbox, self.nt, self.boxcar_history)
         self.boxcar_history = dmt_out[:, -self.nbox:]
-
         return candidates
+        
 
 class Boxcarer:
     def __init__(self, nf:int, max_boxcar_width:int = 32):
