@@ -1,5 +1,6 @@
 from sigpyproc.readers import FilReader
 import numpy as np
+import logging
 
 class LoadFilterbank(FilReader):
     def __init__(self, filname:str):
@@ -12,7 +13,13 @@ class LoadFilterbank(FilReader):
 
     def yield_block(self, nt:int = 256, start:int = 0, nsamps : int = None, skipback: int=0 ):
         for iblock, _, block in self.read_plan(nt, start, nsamps, skipback, verbose = False):
-            yield block.reshape(nt, -1).T
+            if block.size != self.nchans * nt:
+                nt_this_block = block.size // self.nchans
+                logging.info(f"Block {iblock} only has {nt_this_block} samps, yielding a smaller block")
+            else:
+                nt_this_block = nt
+
+            yield block.reshape(nt_this_block, -1).T
 
     def get_block(self, start:int = 0, nsamps: int = None):
         if nsamps is None:
