@@ -4,21 +4,24 @@ from Dedisperser import Dedisperser
 from Boxcarer import Boxcar_and_threshold
 from Cands_handler import Cands_handler
 import numpy as np
-import argparse, os
+import argparse, os, time
 import logging
 import matplotlib.pyplot as plt
 
 
 def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
     f = F(fil_name)
+    tot_nblocks = f.header.nsamples // nt + 1
     norm = Normalise()
     rfi_m = RFI_mitigator(cleaning_chunk=128)
     dd = Dedisperser(fmin = f.fbottom, df = f.df, nf = f.nchans, max_dm=max_dm, nt = nt)
     bt = Boxcar_and_threshold(nt = nt, boxcar_history=np.zeros((max_dm, max_boxcar)))
     dm_boxcar_norm_factors = dd.get_rms_normalising_factor(max_boxcar)
     ch = Cands_handler(outname = candfile)
-
+    all_cands = []
+    max_cands_per_block = 1e6
     for iblock, block in enumerate(f.yield_block(nt)):
+        start = time.time()
         logging.info(f"Processing block {iblock}")
         #plt.figure()
         #plt.imshow(block, aspect='auto', interpolation='None')
@@ -43,11 +46,22 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
 
         logging.debug("Running boxcar and threshold")
         cands = bt.boxcar_and_threshold(dd_block, threshold=threshold, dm_boxcar_norm_factors=dm_boxcar_norm_factors, iblock = iblock)
-
-        logging.debug(f"Got {len(cands)} cands in block {iblock}.")
-        logging.debug(f"Writing the cands to {candfile}")
-        ch.write_cands(cands)
-        #plt.show()
+        ncands = len(cands)
+        logging.debug(f"Got {ncands} cands in block {iblock}.")
+        if ncands > max_cands_per_block:
+            logging.info("Got too many cands in this block, dropping all of them")
+            continue
+        if ncands > 0:
+            all_cands.extend(cands)
+        if (iblock > 0 and iblock % 5 == 0 and len(all_cands) > 0) or (iblock + 1 == tot_nblocks):
+            logging.debug("Clustering the candidates now")
+            repr_cands = ch.cluster_cands(all_cands)
+            logging.debug(f"Writing the clustered cands to {candfile}")
+            ch.write_cands(repr_cands)
+            all_cands = []
+        end = time.time()
+        logging.debug(f"It took {end - start}s")
+    #plt.show()
 
     logging.info("Closing cand file")
     ch.f.close()
@@ -62,8 +76,8 @@ def main(args):
     set_up_logging(args.log_level)
     candname = args.C
     if args.C is None:
-        basename = os.path.basename(args.f)
-        candname = basename.split(".")[0] + ".cand"
+        basename = args.f
+        candname = "".join(basename.split(".")[:-1]) + ".cand"
     run_search(args.f, args.nt, args.max_dm, args.max_boxcar, args.T, candname)
 
 if __name__ == '__main__':
