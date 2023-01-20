@@ -1,7 +1,10 @@
 import numpy as np
 import logging
-from numba import jit, int32, float64
-from numba.experimental import jitclass
+from numba import jit#, int32, float64
+import matplotlib.pyplot as plt
+#from numba.experimental import jitclass
+
+logging.getLogger('numba').setLevel(logging.WARNING)
 '''
 spec = [
     ('ndm', int32),
@@ -19,12 +22,15 @@ spec = [
 def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, ndm, nbox, nt, boxcar_history):
     candidates = np.zeros((ndm * nt, 5), dtype=np.float64) 
     cands_recorded = 0
+    #plt.figure()
+    #logging.debug(f"Threshold is set as: {threshold}")
     for idm in range(ndm):
+        #snrs = []
         for it in range(nt):
             bcsum = 0
             best_cand = np.zeros(5, dtype=np.float64)
             best_snr = None
-            ngroup = 0
+            ngroup = 1
             for ibox in range(nbox):
                 if it >= ibox:
                     inv = dmt_out[idm, it - ibox]
@@ -32,26 +38,33 @@ def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, 
                     inv = boxcar_history[idm, -ibox]
                 bcsum = bcsum + inv
                 #snr = bcsum / np.sqrt(ibox + 1)
-                snr = bcsum / dm_boxcar_norm_factors[idm, ibox]
+                snr = bcsum * dm_boxcar_norm_factors[idm, ibox]
+                
+                
                 if snr >= threshold:
                     if best_snr is None or snr > best_snr:
                         best_cand[0] = snr
                         best_cand[1] = ibox
                         best_cand[2] = idm
-                        best_cand[3] = it * iblock * nt
+                        best_cand[3] = it + iblock * nt
                         #best_cand = [snr, ibox, idm, it + iblock * self.nt]
                         best_snr = snr
                     else:
                         ngroup = ngroup + 1
                     
-            if best_cand is not None:
+            if best_cand[0] > 0:
                 #best_cand.extend([ngroup])
                 best_cand[4] = ngroup
+                
                 #candidates.append(best_cand)
                 candidates[cands_recorded] = best_cand
                 cands_recorded = cands_recorded + 1
-    
-    return candidates
+                #snrs.append(snr)
+        #print(f"len(snrs) = {len(snrs)}, candidates_recorded = {cands_recorded}")
+        #plt.plot(snrs, label=f"idm = {idm}")
+    #plt.show()
+    print(f"Boxcar and threshold found {cands_recorded} cands, ndm * nt = {ndm * nt}")
+    return candidates[:cands_recorded]
 
 
 #@jitclass(spec)
@@ -63,7 +76,6 @@ class Boxcar_and_threshold:
         self.nt = nt
         self.boxcar_history = boxcar_history
 
-    #@jit(nopython=True)
     def boxcar_and_threshold(self, dmt_out, threshold, dm_boxcar_norm_factors, iblock):
         candidates = do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, self.ndm, self.nbox, self.nt, self.boxcar_history)
         self.boxcar_history = dmt_out[:, -self.nbox:]
