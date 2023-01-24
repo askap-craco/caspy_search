@@ -68,15 +68,15 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
             continue
         if ncands > 0:
             all_cands.extend(cands)
-        if (iblock > 0 and iblock % 5 == 0 and len(all_cands) > 0) or (iblock + 1 == tot_nblocks):
+        if (iblock > 0 and iblock % args.clf == 0 and len(all_cands) > 0) or (iblock + 1 == tot_nblocks):
             logging.debug("Clustering the candidates now")
             repr_cands = ch.cluster_cands(all_cands)
             logging.debug(f"Writing the clustered cands to {candfile}")
             ch.write_cands(repr_cands)
             all_cands = []
         end = time.time()
-        logging.debug(f"It took a total of {end - start}s")
-        logging.debug(f"The breakdown of times is as follows - start = {start - start}, norm = {norm_time - start}, cleaning = {cleaning_time - norm_time}, dmt_time = {disp_time - cleaning_time}, boxcar_and_thresh = {bt_time - disp_time} ")
+        logging.info(f"It took a total of {end - start}s")
+        logging.info(f"The breakdown of times is as follows - start = {start - start}, norm = {norm_time - start}, cleaning = {cleaning_time - norm_time}, dmt_time = {disp_time - cleaning_time}, boxcar_and_thresh = {bt_time - disp_time} ")
 
         if args.plot:
             plt.show()
@@ -107,6 +107,7 @@ if __name__ == '__main__':
     a.add_argument("-T", type=float, help="S/N threshold to get candidates (def = 10)", default=10)
     a.add_argument("-C", type=str, help="Name of file to write cands to (def = <filname>.cands", default=None)
     a.add_argument("-log_level", type=str, help="Logging level - [CRITICAL/INFO/DEBUG] (def = DEBUG)", default="DEBUG")
+    a.add_argument("-clf", type=int, help="How many blocks to accumulate before clustering (def = 5)", default=5)
     a.add_argument("-plot", action='store_true', help="Plot the different stages of processing for each block?", default=False)
 
     args = a.parse_args()
