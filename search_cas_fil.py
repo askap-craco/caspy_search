@@ -17,18 +17,29 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
         f = LN(fil_name)
     else:
         raise ValueError("Invalid data type provided")
+
+    start, nsamps = 0, f.tot_samples
+    if args.seek is not None:
+        start = int(args.seek // f.tsamp)
+    elif args.seek_samps is not None:
+        start = args.seek_samps
+    if args.dur is not None:
+        nsamps = int(args.dur // f.tsamp)
+    elif args.ns is not None:
+        nsamps = args.ns
+
     tot_nblocks = f.tot_samples // nt  + 1 if f.tot_samples %nt >0 else f.tot_samples //nt
-    norm = Normalise()
+    norm = Normalise(care_about_zeros=True)
     rfi_m = RFI_mitigator(cleaning_chunk=128)
     dd = Dedisperser(fmin = f.fbottom, df = f.df, nf = f.nchans, max_dm=max_dm, nt = nt)
-    bt = Boxcar_and_threshold(nt = nt, boxcar_history=np.zeros((max_dm, max_boxcar)))
+    bt = Boxcar_and_threshold(nt = nt, boxcar_history=np.zeros((max_dm, max_boxcar)), keep_last_boxcar=args.keep_last_boxcar)
     dm_boxcar_norm_factors = 1 / dd.get_rms_normalising_factor(max_boxcar)
     #print("dm_boxcar_norm_factors are:", dm_boxcar_norm_factors)
-    ch = Cands_handler(outname = candfile)
+    ch = Cands_handler(outname = candfile, clustering_eps = args.cl_eps)
     all_cands = []
-    max_cands_per_block = 1e6
-    for iblock, block in enumerate(f.yield_block(nt)):
-        start = time.time()
+    max_cands_per_block = max_dm * nt // 2 
+    for iblock, block in enumerate(f.yield_block(nt, start, nsamps)):
+        start_time = time.time()
         logging.info(f"Processing block {iblock}")
         if args.plot:
             plt.figure()
@@ -36,7 +47,7 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
             plt.title("Raw block")
 
         logging.debug(f"Normalising the block")
-        normed_block = norm.mad_norm(block)
+        normed_block = norm.proper_norm(block)
         norm_time = time.time()
         if args.plot:
             plt.figure()
@@ -58,6 +69,13 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
             plt.figure()
             plt.imshow(dd_block, aspect='auto', interpolation='None')
 
+            boxed_out = bt.run_pure_boxcar(dd_block)
+            tndm, tnt, tnbox = boxed_out.shape
+            for ibox in range(tnbox):
+                plt.figure()
+                plt.imshow(boxed_out[:, :, ibox] * dm_boxcar_norm_factors[:, ibox].reshape(tndm, -1), aspect='auto', interpolation="None")
+                plt.title(f"ibox = {ibox}")
+
         logging.debug("Running boxcar and threshold")
         cands = bt.boxcar_and_threshold(dd_block, threshold=threshold, dm_boxcar_norm_factors=dm_boxcar_norm_factors, iblock = iblock)
         bt_time = time.time()
@@ -68,18 +86,20 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
             continue
         if ncands > 0:
             all_cands.extend(cands)
-        if (iblock > 0 and iblock % args.clf == 0 and len(all_cands) > 0) or (iblock + 1 == tot_nblocks):
+        if (len(all_cands) > 0) and ((iblock > 0 and iblock % args.clf == 0) or (iblock + 1 == tot_nblocks)):
             logging.debug("Clustering the candidates now")
             repr_cands = ch.cluster_cands(all_cands)
             logging.debug(f"Writing the clustered cands to {candfile}")
             ch.write_cands(repr_cands)
             all_cands = []
         end = time.time()
-        logging.info(f"It took a total of {end - start}s")
-        logging.info(f"The breakdown of times is as follows - start = {start - start}, norm = {norm_time - start}, cleaning = {cleaning_time - norm_time}, dmt_time = {disp_time - cleaning_time}, boxcar_and_thresh = {bt_time - disp_time} ")
+        logging.info(f"It took a total of {end - start_time}s")
+        logging.info(f"The breakdown of times is as follows - norm = {norm_time - start_time}, cleaning = {cleaning_time - norm_time}, dmt_time = {disp_time - cleaning_time}, boxcar_and_thresh = {bt_time - disp_time} ")
 
         if args.plot:
-            plt.show()
+            plt.show(block=False)
+            _ = input()
+            plt.close('all')
 
     logging.info("Closing cand file")
     ch.f.close()
@@ -109,6 +129,14 @@ if __name__ == '__main__':
     a.add_argument("-log_level", type=str, help="Logging level - [CRITICAL/INFO/DEBUG] (def = DEBUG)", default="DEBUG")
     a.add_argument("-clf", type=int, help="How many blocks to accumulate before clustering (def = 5)", default=5)
     a.add_argument("-plot", action='store_true', help="Plot the different stages of processing for each block?", default=False)
+    a.add_argument("-keep_last_boxcar", action='store_true', help="Dont discard cands in the highest boxcar trial", default=False)
+    a.add_argument("-cl_eps", type=float, help="Clustering eps (def=2.5)", default=2.5)
+    g1 = a.add_mutually_exclusive_group()
+    g1.add_argument("-seek", type=float, help="Seek x seconds into the file (def = 0)", default=None)
+    g1.add_argument("-seek_samps", type=int, help="Seek x samps into the file (def =0)", default=None)
+    g2 = a.add_mutually_exclusive_group()
+    g2.add_argument("-dur", type=float, help="Process x seconds of data only (say -1 for full file, def=-1)", default=None)
+    g2.add_argument("-ns", type=int, help="Process only x samples of the data (say -1 for full file, def = -1)", default=None)
 
     args = a.parse_args()
     main(args)
