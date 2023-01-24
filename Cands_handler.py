@@ -31,7 +31,8 @@ class Cands_handler:
 
     def find_representative_cands(self, cands_arr, labels):
         best_cands = []
-        for label in labels:
+        uniq_labels = np.unique(labels)
+        for label in uniq_labels:
             label_mask = labels == label
             this_label_cands = cands_arr[label_mask]
             ncands = len(this_label_cands)
