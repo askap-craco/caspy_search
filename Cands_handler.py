@@ -6,7 +6,7 @@ class Cands_handler:
     '''
     To be implemented
     '''
-    def __init__(self, outname, clustering_eps = 3):
+    def __init__(self, outname, clustering_eps):
         self.outname = outname
         self.header_inkeys = ['SNR', 'boxcar', 'DM', 'samp', 'ngroup']
         self.header_outkeys = self.header_inkeys + ['ncluster']
@@ -24,7 +24,7 @@ class Cands_handler:
             logging.debug(f"Writing {len(cands)} cands to file")
             for cand in cands:
                 for field in cand:
-                    self.f.write(str(field) + "\t")
+                    self.f.write(f"{field:.2f}\t")
                 self.f.write("\n")
         else:
             logging.debug("No cands to write")
@@ -45,7 +45,6 @@ class Cands_handler:
 
     def cluster_cands(self, cands):
         cands_arr = np.array(cands)
-        #print("------> Cands_arr given to the cluster_cans fx is ", cands_arr, cands_arr.shape)
         normalised_cands = np.zeros((len(cands), 3))
         normalised_cands[:, 0] = cands_arr[:, 1] / 4
         normalised_cands[:, 1] = cands_arr[:, 2] / 10
