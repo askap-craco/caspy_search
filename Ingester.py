@@ -9,6 +9,7 @@ class LoadFilterbank(FilReader):
         self.fbottom = np.min(self.header.chan_freqs) - np.abs(self.header.foff) / 2
         self.df = np.abs(self.header.foff)
         self.nchans = self.header.nchans
+        self.tsamp = self.header.tsamp
         self.tot_samples = self.header.nsamples
 
     def yield_block(self, nt:int = 256, start:int = 0, nsamps : int = None, skipback: int=0 ):
@@ -20,7 +21,11 @@ class LoadFilterbank(FilReader):
             else:
                 nt_this_block = nt
 
-            yield block.reshape(nt_this_block, -1).T
+            outblock = block.reshape(nt_this_block, -1).T
+            if self.df > 0:
+                yield outblock[::-1, :]
+            else:
+                yield outblock
 
     def get_block(self, start:int = 0, nsamps: int = None):
         if nsamps is None:
@@ -28,7 +33,7 @@ class LoadFilterbank(FilReader):
         return self.read_block(start, nsamps)
 
 class LoadNumpy:
-    def __init__(self, filename:str, fbottom:float=1152.5, df:float=1.0):
+    def __init__(self, filename:str, fbottom:float=1152.5, df:float=1.0, tsamp:float=0.001):
         self.filename = filename
         self.data = np.load(self.filename)
         if self.data.ndim != 2:
@@ -37,6 +42,8 @@ class LoadNumpy:
         self.fbottom = fbottom
         self.df = df
         self.tot_samples = self.data.shape[1]
+        if self.df > 0:
+            self.data = self.data[::-1, :]
 
     def yield_block(self, nt:int=256, start:int = 0, nsamps:int = None, skipback:int =0):
         last_samp_read = start
