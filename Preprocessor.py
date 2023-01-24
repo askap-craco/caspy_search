@@ -1,6 +1,7 @@
 import numpy as np
 import logging
 from iqrm import iqrm_mask
+from numba import jit
 
 def get_mad(median_normed_data):
     return np.median(np.abs(median_normed_data), axis=1)
@@ -8,7 +9,37 @@ def get_mad(median_normed_data):
 def get_mad_std(median_normed_data):
     return 1.4286 * get_mad(median_normed_data)
 
+
+@jit(nopython=True)
+def fast_norm(block, care_about_zeros):
+    nchan, nt = block.shape
+    mean =0 
+    std =0
+    normed_block = np.zeros_like(block)
+    for ichan in range(nchan):
+        sum = 0
+        sumsq = 0
+        nvalid = 0
+        for it in range(nt):
+            isamp = block[ichan, it]
+            if isamp == 0 and care_about_zeros:
+                continue
+            sum = sum + isamp
+            sumsq = sumsq + isamp**2
+            nvalid += 1
+        mean = sum / nvalid
+        std = np.sqrt(nvalid * sumsq - sum**2) / nvalid
+        for it in range(nt):
+            isamp = block[ichan, it]
+            if isamp !=0:
+                normed_block[ichan, it] = (isamp - mean) / std
+    return normed_block
+
+
 class Normalise:
+    
+    def __init__(self, care_about_zeros = True):
+        self.care_about_zeros = care_about_zeros
     
     def mad_norm(self, data, mean = 0, std = 1):
         if data.ndim != 2:
@@ -35,6 +66,12 @@ class Normalise:
         normed_data = np.zeros_like(data)
         normed_data[non_zero_std_mask, :] = (data[non_zero_std_mask, :] - means[non_zero_std_mask, None]) / stds[non_zero_std_mask, None] * std + mean
         return normed_data
+
+    def proper_norm(self, block):
+        return fast_norm(block, self.care_about_zeros)
+
+
+
 
 
 class RFI_mitigator:
