@@ -1,5 +1,19 @@
 import numpy as np
 from fdmt import Fdmt
+from numba import jit
+
+@jit(nopython=True)
+def fast_overlap_and_sum(dmt, summed_dmt_out):
+    ndm, ndm_plus_nt = dmt.shape
+    nt = ndm_plus_nt - ndm
+    for idm in range(ndm):
+        for it in range(ndm_plus_nt):
+            if it + nt < ndm_plus_nt:
+                summed_dmt_out[idm, it] = dmt[idm, it] + summed_dmt_out[idm, it + nt]
+            else:
+                summed_dmt_out[idm, it] = dmt[idm, it]  
+    
+    return summed_dmt_out 
 
 class Dedisperser:
     def __init__(self, fmin:float, df: float, nf: int, max_dm: int, nt:int):
@@ -32,14 +46,7 @@ class Dedisperser:
         return dmt_out
 
     def overlap_and_sum(self, dmt):
-        ndm, ndm_plus_nt = dmt.shape
-        nt = ndm_plus_nt - ndm
-        for idm in range(ndm):
-            for it in range(ndm_plus_nt):
-                if it + nt < ndm_plus_nt:
-                    self.summed_dmt_out[idm, it] = dmt[idm, it] + self.summed_dmt_out[idm, it + nt]
-                else:
-                    self.summed_dmt_out[idm, it] = dmt[idm, it]
+        self.summed_dmt_out = fast_overlap_and_sum(dmt, self.summed_dmt_out)
 
     def get_full_DMT(self, block):
         dmt_single = self.get_single_block_DMT(block)
