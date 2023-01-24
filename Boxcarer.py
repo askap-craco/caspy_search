@@ -38,9 +38,10 @@ def do_only_boxcar(dmt_out, ndm, nbox, nt, boxcar_history):
 
 
 @jit(nopython=True)
-def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, ndm, nbox, nt, boxcar_history):
+def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, ndm, nbox, nt, boxcar_history, keep_last_boxcar):
     candidates = np.zeros((ndm * nt, 5), dtype=np.float64) 
     cands_recorded = 0
+    cands_ignored = 0
     #plt.figure()
     #logging.debug(f"Threshold is set as: {threshold}")
     for idm in range(ndm):
@@ -54,7 +55,7 @@ def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, 
                 if it >= ibox:
                     inv = dmt_out[idm, it - ibox]
                 else:
-                    inv = boxcar_history[idm, it - ibox]        #Shouldn't this still be (it-ibox) instead of just -ibox?
+                    inv = boxcar_history[idm, it - ibox]
                 bcsum = bcsum + inv
                 #snr = bcsum / np.sqrt(ibox + 1)
                 snr = bcsum * dm_boxcar_norm_factors[idm, ibox]
@@ -66,38 +67,39 @@ def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, 
                         best_cand[1] = ibox
                         best_cand[2] = idm
                         best_cand[3] = it + iblock * nt
-                        #best_cand = [snr, ibox, idm, it + iblock * self.nt]
                         best_snr = snr
                         #print(f"The best snr for idm {idm}, it {it} and ibox {ibox} before normalising was: {snr / dm_boxcar_norm_factors[idm, ibox]}, {snr}, {dm_boxcar_norm_factors[idm, ibox]}")
                     else:
                         ngroup = ngroup + 1
                     
             if best_cand[0] > 0:
-                #best_cand.extend([ngroup])
+                if best_cand[1] == (nbox-1) and not keep_last_boxcar:
+                    cands_ignored += 1
+                    continue
                 best_cand[4] = ngroup
-                
-                #candidates.append(best_cand)
                 candidates[cands_recorded] = best_cand
                 cands_recorded = cands_recorded + 1
                 #snrs.append(snr)
         #print(f"len(snrs) = {len(snrs)}, candidates_recorded = {cands_recorded}")
         #plt.plot(snrs, label=f"idm = {idm}")
     #plt.show()
-    print(f"Boxcar and threshold found {cands_recorded} cands, ndm * nt = {ndm * nt}")
+    print(f"Boxcar and threshold found {cands_recorded} cands, and ignored {cands_ignored} cands, ndm * nt = {ndm * nt}")
     return candidates[:cands_recorded]
 
 
 #@jitclass(spec)
 class Boxcar_and_threshold:
-    def __init__(self, nt, boxcar_history):
+    def __init__(self, nt, boxcar_history, keep_last_boxcar):
         ndm, nbox = boxcar_history.shape
         self.ndm = ndm
         self.nbox = nbox
         self.nt = nt
         self.boxcar_history = boxcar_history
+        self.keep_last_boxcar = keep_last_boxcar
+
 
     def boxcar_and_threshold(self, dmt_out, threshold, dm_boxcar_norm_factors, iblock):
-        candidates = do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, self.ndm, self.nbox, self.nt, self.boxcar_history)
+        candidates = do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, self.ndm, self.nbox, self.nt, self.boxcar_history, self.keep_last_boxcar)
         self.boxcar_history = dmt_out[:, -self.nbox:]
         return candidates
 
