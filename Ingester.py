@@ -28,22 +28,23 @@ class LoadFilterbank(FilReader):
         return self.read_block(start, nsamps)
 
 class LoadNumpy:
-    def __init__(self, filename:str):
+    def __init__(self, filename:str, fbottom:float=1152.5, df:float=1.0):
         self.filename = filename
         self.data = np.load(self.filename)
         if self.data.ndim != 2:
             raise TypeError("The datafile does not contain a 2-D array")
         self.nchans = self.data.shape[0]
-        self.fbottom = 1152.5
-        self.df = 1
+        self.fbottom = fbottom
+        self.df = df
         self.tot_samples = self.data.shape[1]
 
     def yield_block(self, nt:int=256, start:int = 0, nsamps:int = None, skipback:int =0):
         last_samp_read = start
-        stop_samp = (nsamps - start) // nt * nt + start
         iblock = 0
         if nsamps is None:
             nsamps = self.tot_samples - start
+
+        stop_samp = nsamps // nt * nt + start
         while True:
             if last_samp_read >= start + nsamps or last_samp_read >= self.tot_samples:
                 logging.info("Reached the end of file.. exiting the yielding while loop")
