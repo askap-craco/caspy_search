@@ -17,6 +17,25 @@ spec = [
     ('iblock', int32)
 ]
 '''
+@jit(nopython=True)
+def do_only_boxcar(dmt_out, ndm, nbox, nt, boxcar_history):
+
+    summed = np.zeros((ndm, nt, nbox), dtype=np.float64)
+    for idm in range(ndm):
+        for it in range(nt):
+            bcsum = 0
+            for ibox in range(nbox):
+                if it >= ibox:
+                    inv = dmt_out[idm, it - ibox]
+                else:
+                    inv = boxcar_history[idm, it -ibox]
+
+                bcsum = bcsum + inv
+                summed[idm, it, ibox] = bcsum
+    
+    return summed
+    
+
 
 @jit(nopython=True)
 def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, ndm, nbox, nt, boxcar_history):
@@ -35,7 +54,7 @@ def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, 
                 if it >= ibox:
                     inv = dmt_out[idm, it - ibox]
                 else:
-                    inv = boxcar_history[idm, -ibox]
+                    inv = boxcar_history[idm, it - ibox]        #Shouldn't this still be (it-ibox) instead of just -ibox?
                 bcsum = bcsum + inv
                 #snr = bcsum / np.sqrt(ibox + 1)
                 snr = bcsum * dm_boxcar_norm_factors[idm, ibox]
@@ -49,6 +68,7 @@ def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, 
                         best_cand[3] = it + iblock * nt
                         #best_cand = [snr, ibox, idm, it + iblock * self.nt]
                         best_snr = snr
+                        #print(f"The best snr for idm {idm}, it {it} and ibox {ibox} before normalising was: {snr / dm_boxcar_norm_factors[idm, ibox]}, {snr}, {dm_boxcar_norm_factors[idm, ibox]}")
                     else:
                         ngroup = ngroup + 1
                     
@@ -80,6 +100,10 @@ class Boxcar_and_threshold:
         candidates = do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, self.ndm, self.nbox, self.nt, self.boxcar_history)
         self.boxcar_history = dmt_out[:, -self.nbox:]
         return candidates
+
+    def run_pure_boxcar(self, dmt_out):
+        boxed_out = do_only_boxcar(dmt_out, self.ndm, self.nbox, self.nt, self.boxcar_history)
+        return boxed_out
         
 
 class Boxcarer:
