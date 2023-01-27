@@ -8,7 +8,7 @@ import numpy as np
 import logging
 #from numba import njit, jit, prange
 import math
-from IPython import embed
+#from IPython import embed
 
 __author__ = "Keith Bannister <keith.bannister@csiro.au>"
 
