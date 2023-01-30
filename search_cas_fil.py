@@ -97,7 +97,7 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
         logging.info(f"The breakdown of times is as follows - norm = {norm_time - start_time}, cleaning = {cleaning_time - norm_time}, dmt_time = {disp_time - cleaning_time}, boxcar_and_thresh = {bt_time - disp_time} ")
 
         if args.plot:
-            plt.show(block=False)
+            plt.show(block=True)
             _ = input()
             plt.close('all')
 
