@@ -5,7 +5,7 @@ from Dedisperser import Dedisperser
 from Boxcarer import Boxcar_and_threshold
 from Cands_handler import Cands_handler
 import numpy as np
-import argparse, os, time
+import argparse, os, time, sys
 import logging
 import matplotlib.pyplot as plt
 
@@ -101,7 +101,9 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
             _ = input()
             plt.close('all')
 
+    ch.f.write("# This file contains the output of the following command: " + " ".join(sys.arv[:]) + "\n")
     logging.info("Closing cand file")
+
     ch.f.close()
 
 def set_up_logging(log_level):
