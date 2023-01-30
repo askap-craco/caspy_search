@@ -76,10 +76,11 @@ def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, 
                 if best_cand[1] == (nbox-1) and not keep_last_boxcar:
                     cands_ignored += 1
                     continue
-                best_cand[4] = ngroup
-                candidates[cands_recorded] = best_cand
-                cands_recorded = cands_recorded + 1
-                #snrs.append(snr)
+                else:
+                    best_cand[4] = ngroup
+                    candidates[cands_recorded] = best_cand
+                    cands_recorded = cands_recorded + 1
+                    #snrs.append(snr)
         #print(f"len(snrs) = {len(snrs)}, candidates_recorded = {cands_recorded}")
         #plt.plot(snrs, label=f"idm = {idm}")
     #plt.show()
@@ -96,6 +97,7 @@ class Boxcar_and_threshold:
         self.nt = nt
         self.boxcar_history = boxcar_history
         self.keep_last_boxcar = keep_last_boxcar
+        logging.info(f"Setting up the Boxcar_and_threshold class with ndm = {self.ndm}, nbox = {self.nbox}, nt = {self.nt}, boxcar_history.shape = {self.boxcar_history.shape}, keep_last_boxcar = {self.keep_last_boxcar}")
 
 
     def boxcar_and_threshold(self, dmt_out, threshold, dm_boxcar_norm_factors, iblock):

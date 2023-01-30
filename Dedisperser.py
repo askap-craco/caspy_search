@@ -1,6 +1,7 @@
 import numpy as np
 from fdmt import Fdmt
 from numba import jit
+import logging
 
 @jit(nopython=True)
 def fast_overlap_and_sum(dmt, summed_dmt_out):
@@ -27,6 +28,7 @@ class Dedisperser:
         self.summed_dmt_out = np.zeros((max_dm, max_dm + nt))
 
         self.nsamps_summed = self.get_nsamps_summed()
+        logging.info(f"Setting up the Dedisperser class with fmin = {self.fmin}, df = {self.df}, nf = {self.nf}, max_dm = {self.max_dm}, nt = {self.nt}")
 
     def get_nsamps_summed(self):
         mock_fdmt = Fdmt(self.fmin, self.df, self.nf, self.max_dm, self.max_dm + 1)

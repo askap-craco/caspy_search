@@ -39,6 +39,7 @@ def fast_norm(block, care_about_zeros):
 class Normalise:
     
     def __init__(self, care_about_zeros = True):
+        logging.info(f"Setting up Normalise class with 'care_about_zeros = {care_about_zeros}")
         self.care_about_zeros = care_about_zeros
     
     def mad_norm(self, data, mean = 0, std = 1):
@@ -78,7 +79,7 @@ class RFI_mitigator:
     def __init__(self, cleaning_chunk = 64, threshold = 3):
         self.chunk = cleaning_chunk 
         self.threshold = threshold
-        logging.debug(f"Setting chunk size = {self.chunk}")
+        logging.info(f"Setting up RFI mitigator class with chunk size = {self.chunk}, threshold = {self.threshold}")
     
     def get_chunk(self, block):
         nf, nt = block.shape
