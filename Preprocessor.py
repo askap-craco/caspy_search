@@ -27,12 +27,14 @@ def fast_norm(block, care_about_zeros):
             sum = sum + isamp
             sumsq = sumsq + isamp**2
             nvalid += 1
-        mean = sum / nvalid
-        std = np.sqrt(nvalid * sumsq - sum**2) / nvalid
-        for it in range(nt):
-            isamp = block[ichan, it]
-            if isamp !=0:
-                normed_block[ichan, it] = (isamp - mean) / std
+        if nvalid != 0:
+            mean = sum / nvalid
+            std = np.sqrt(nvalid * sumsq - sum**2) / nvalid
+            if std != 0:
+                for it in range(nt):
+                    isamp = block[ichan, it]
+                    if isamp !=0:
+                        normed_block[ichan, it] = (isamp - mean) / std
     return normed_block
 
 
