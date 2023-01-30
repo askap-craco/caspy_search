@@ -15,7 +15,7 @@ def fast_norm(block, care_about_zeros):
     nchan, nt = block.shape
     mean =0 
     std =0
-    normed_block = np.zeros_like(block)
+    normed_block = np.zeros_like(block, dtype=np.float64)
     for ichan in range(nchan):
         sum = 0
         sumsq = 0
