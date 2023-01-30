@@ -103,12 +103,14 @@ class RFI_mitigator:
         mask, votes = iqrm_mask(ts, radius = len(ts) / 10, threshold = self.threshold)
         return mask
 
-    def clean_block(self, block):
+    def clean_block(self, block, clean_freq = True, clean_time = False):
         for ichunk, chunk in enumerate(self.get_chunk(block)):
-            chan_mask = self.get_mask(chunk.std(axis=1))
-            chunk[chan_mask, :] = 0
-            #time_mask = self.get_mask(chunk.std(axis=0))
-            #chunk[:,time_mask] = 0
+            if clean_freq:
+                chan_mask = self.get_mask(chunk.std(axis=1))
+                chunk[chan_mask, :] = 0
+            if clean_time:
+                time_mask = self.get_mask(chunk.std(axis=0))
+                chunk[:,time_mask] = 0
 
             if ichunk ==0:
                 cleaned_block = chunk.copy()
