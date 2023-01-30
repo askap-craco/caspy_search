@@ -101,7 +101,7 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
             _ = input()
             plt.close('all')
 
-    ch.f.write("# This file contains the output of the following command: " + " ".join(sys.arv[:]) + "\n")
+    ch.f.write("# This file contains the output of the following command: " + " ".join(sys.argv[:]) + "\n")
     logging.info("Closing cand file")
 
     ch.f.close()
