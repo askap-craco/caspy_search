@@ -19,7 +19,7 @@ spec = [
 '''
 @jit(nopython=True)
 def do_only_boxcar(dmt_out, ndm, nbox, nt, boxcar_history):
-
+    #print("Boxcar history looks like this: ", boxcar_history)
     summed = np.zeros((ndm, nt, nbox), dtype=np.float64)
     for idm in range(ndm):
         for it in range(nt):
@@ -28,7 +28,10 @@ def do_only_boxcar(dmt_out, ndm, nbox, nt, boxcar_history):
                 if it >= ibox:
                     inv = dmt_out[idm, it - ibox]
                 else:
-                    inv = boxcar_history[idm, it -ibox]
+                    inv = boxcar_history[idm, it - ibox]
+                #if idm == 0 and it < 32:
+                #    print(idm, it, ibox, inv, bcsum, bcsum + inv)
+                #    print(boxcar_history[idm])
 
                 bcsum = bcsum + inv
                 summed[idm, it, ibox] = bcsum
@@ -87,6 +90,9 @@ def do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, 
     print(f"Boxcar and threshold found {cands_recorded} cands, and ignored {cands_ignored} cands, ndm * nt = {ndm * nt}")
     return candidates[:cands_recorded]
 
+@jit(nopython=True)
+def fast_copy(dest_arr, src_arr):
+    dest_arr[:] = src_arr
 
 #@jitclass(spec)
 class Boxcar_and_threshold:
@@ -95,46 +101,19 @@ class Boxcar_and_threshold:
         self.ndm = ndm
         self.nbox = nbox
         self.nt = nt
-        self.boxcar_history = boxcar_history
+        self.boxcar_history = np.zeros(boxcar_history.shape)
         self.keep_last_boxcar = keep_last_boxcar
         logging.info(f"Setting up the Boxcar_and_threshold class with ndm = {self.ndm}, nbox = {self.nbox}, nt = {self.nt}, boxcar_history.shape = {self.boxcar_history.shape}, keep_last_boxcar = {self.keep_last_boxcar}")
 
 
     def boxcar_and_threshold(self, dmt_out, threshold, dm_boxcar_norm_factors, iblock):
         candidates = do_boxcar_and_threshold(dmt_out, threshold, dm_boxcar_norm_factors, iblock, self.ndm, self.nbox, self.nt, self.boxcar_history, self.keep_last_boxcar)
-        self.boxcar_history = dmt_out[:, -self.nbox:]
+        self.boxcar_history[:] = dmt_out[:, self.nt-self.nbox:self.nt]
         return candidates
 
     def run_pure_boxcar(self, dmt_out):
         boxed_out = do_only_boxcar(dmt_out, self.ndm, self.nbox, self.nt, self.boxcar_history)
+        fast_copy(self.boxcar_history, dmt_out[:, self.nt - self.nbox: self.nt])
+        #self.boxcar_history[:] = dmt_out[:, self.nt-self.nbox:self.nt]
         return boxed_out
         
-
-class Boxcarer:
-    def __init__(self, nf:int, max_boxcar_width:int = 32):
-        self.max_boxcar_width = max_boxcar_width
-        self.boxcar_history = np.zeros((nf, max_boxcar_width))
-
-    def convolve(data, boxcar):
-        if boxcar == 1:
-            return data
-        ts_conv = np.convolve(data, np.ones(boxcar), mode='valid')
-        return ts_conv
-
-    def run_boxcar(self, data):
-        new_data = np.hstack((self.boxcar_history, data))
-        self.boxcar_history = data[:, -self.max_boxcar_width:]
-        boxout = []
-        for ibox in range(1, self.max_boxcar_width + 1):
-            boxout.append(self.convolve(new_data, ibox))
-
-        return np.array(boxout)
-
-    
-class Thersholder:
-    def __init__(self, threshold = 8):
-        self.threshold = threshold
-
-    def threshold(self, cube):
-        locs = np.argswhere(cube > self.thershold)
-        return locs, cube[locs]
