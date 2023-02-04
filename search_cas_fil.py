@@ -89,8 +89,9 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
         if (len(all_cands) > 0) and ((iblock > 0 and iblock % args.clf == 0) or (iblock + 1 == tot_nblocks)):
             logging.debug("Clustering the candidates now")
             repr_cands = ch.cluster_cands(all_cands)
+            final_cands = ch.add_physical_units_columns(cands=repr_cands, fbottom=f.fbottom, df = f.df, nf = f.nchans, tsamp=f.tsamp)
             logging.debug(f"Writing the clustered cands to {candfile}")
-            ch.write_cands(repr_cands)
+            ch.write_cands(final_cands)
             all_cands = []
         end = time.time()
         logging.info(f"It took a total of {end - start_time}s")
