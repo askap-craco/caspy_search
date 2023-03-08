@@ -34,7 +34,14 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
     dd = Dedisperser(fmin = f.fbottom, df = f.df, nf = f.nchans, max_dm=max_dm, nt = nt)
     bt = Boxcar_and_threshold(nt = nt, boxcar_history=np.zeros((max_dm, max_boxcar)), keep_last_boxcar=args.keep_last_boxcar)
     dm_boxcar_norm_factors = 1 / dd.get_rms_normalising_factor(max_boxcar)
-    #print("dm_boxcar_norm_factors are:", dm_boxcar_norm_factors)
+    if args.plot:
+        plt.figure()
+        #print("dm_boxcar_norm_factors are:", dm_boxcar_norm_factors)
+        plt.imshow(dm_boxcar_norm_factors, aspect='auto', interpolation='None')
+        plt.xlabel("Boxcar")
+        plt.ylabel("iDM")
+        plt.title("dm_boxcar_normalising_factors")
+        plt.show()
     ch = Cands_handler(outname = candfile, clustering_eps = args.cl_eps)
     all_cands = []
     max_cands_per_block = max_dm * nt // 2 
@@ -86,11 +93,11 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
             continue
         if ncands > 0:
             all_cands.extend(cands)
-        if (len(all_cands) > 0) and ((iblock > 0 and iblock % args.clf == 0) or (iblock + 1 == tot_nblocks)):
-            logging.debug("Clustering the candidates now")
+        if (len(all_cands) > 0) and ((iblock > 0 and iblock % args.clf == 0) or (iblock + 1 == tot_nblocks) or (iblock + 2 == tot_nblocks)):
+            logging.debug(f"Clustering the {len(all_cands)} candidates now")
             repr_cands = ch.cluster_cands(all_cands)
             final_cands = ch.add_physical_units_columns(cands=repr_cands, fbottom=f.fbottom, df = f.df, nf = f.nchans, tsamp=f.tsamp)
-            logging.debug(f"Writing the clustered cands to {candfile}")
+            logging.debug(f"Writing {len(final_cands)} clustered cands to {candfile}")
             ch.write_cands(final_cands)
             all_cands = []
         end = time.time()
