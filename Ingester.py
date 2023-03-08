@@ -22,7 +22,8 @@ class LoadFilterbank(FilReader):
                 nt_this_block = nt
 
             outblock = block.reshape(nt_this_block, -1).T
-            if self.df > 0:
+            if self.df < 0:
+                logging.debug("The channel bandwidth is positive --- flipping the data")
                 yield outblock[::-1, :]
             else:
                 yield outblock
