@@ -1,9 +1,9 @@
-from Ingester import LoadFilterbank as F
-from Ingester import LoadNumpy as LN
-from Preprocessor import Normalise, RFI_mitigator
-from Dedisperser import Dedisperser
-from Boxcarer import Boxcar_and_threshold
-from Cands_handler import Cands_handler
+from caspy_search.Ingester import LoadFilterbank as F
+from caspy_search.Ingester import LoadNumpy as LN
+from caspy_search.Preprocessor import Normalise, RFI_mitigator
+from caspy_search.Dedisperser import Dedisperser
+from caspy_search.Boxcarer import Boxcar_and_threshold
+from caspy_search.Cands_handler import Cands_handler
 import numpy as np
 import argparse, os, time, sys
 import logging
@@ -120,15 +120,8 @@ def set_up_logging(log_level):
     logging_level = logging.__getattribute__(log_level.upper())
     logging.basicConfig(level=logging_level, format="%(asctime)s, %(levelname)s: %(message)s")
 
-def main(args):
-    set_up_logging(args.log_level)
-    candname = args.C
-    if args.C is None:
-        basename = args.f
-        candname = "".join(basename.split(".")[:-1]) + ".cand"
-    run_search(args.f, args.nt, args.max_dm, args.max_boxcar, args.T, candname)
 
-if __name__ == '__main__':
+def get_parser():
     a = argparse.ArgumentParser()
     a.add_argument("-f", type=str, help="Filterbank to process", required=True)
     a.add_argument("-nt", type=int, help="No. of samples in each block to process (def: 256)", default=256)
@@ -149,4 +142,17 @@ if __name__ == '__main__':
     g2.add_argument("-ns", type=int, help="Process only x samples of the data (say -1 for full file, def = -1)", default=None)
 
     args = a.parse_args()
+
+def main():
+    get_parser()
+    set_up_logging(args.log_level)
+    candname = args.C
+    if args.C is None:
+        basename = args.f
+        candname = "".join(basename.split(".")[:-1]) + ".cand"
+    run_search(args.f, args.nt, args.max_dm, args.max_boxcar, args.T, candname)
+
+
+
+if __name__ == '__main__':
     main(args)

@@ -1,5 +1,5 @@
 import numpy as np
-from fdmt import Fdmt
+from caspy_search.fdmt import Fdmt
 from numba import jit
 import logging
 
