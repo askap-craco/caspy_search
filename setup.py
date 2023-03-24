@@ -1,6 +1,7 @@
 from setuptools import setup
 
-requirements = ['numpy', 'matplotlib', 'pandas', 'numba', 'iqrm', 'sigpyproc']
+requirements = ['numpy', 'matplotlib', 'pandas', 'numba', 'iqrm']
+requirements += ['git+https://github.com/FRBs/sigpyproc3']
 packages = ['caspy_search']
 
 setup(name = "caspy_search",
