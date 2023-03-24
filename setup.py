@@ -1,7 +1,6 @@
 from setuptools import setup
 
 requirements = ['numpy', 'matplotlib', 'pandas', 'numba', 'iqrm']
-requirements += ['git+https://github.com/FRBs/sigpyproc3']
 packages = ['caspy_search']
 
 setup(name = "caspy_search",
@@ -12,5 +11,6 @@ setup(name = "caspy_search",
         install_requires = requirements,
         python_requires = '>3.6',
         packages=packages,
+        dependency_links = ['https://github.com/FRBs/sigpyproc3/tarball/main'],
         entry_points = {'console_scripts': ['search_cas_fil=caspy_search.search_cas_fil:main']}
         )
