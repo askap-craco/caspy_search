@@ -10,7 +10,7 @@ import logging
 import matplotlib.pyplot as plt
 
 
-def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile):
+def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile, args):
     if fil_name.endswith("fil"):
         f = F(fil_name)
     elif fil_name.endswith("npy"):
@@ -142,15 +142,16 @@ def get_parser():
     g2.add_argument("-ns", type=int, help="Process only x samples of the data (say -1 for full file, def = -1)", default=None)
 
     args = a.parse_args()
+    return args
 
 def main():
-    get_parser()
+    args = get_parser()
     set_up_logging(args.log_level)
     candname = args.C
     if args.C is None:
         basename = args.f
         candname = "".join(basename.split(".")[:-1]) + ".cand"
-    run_search(args.f, args.nt, args.max_dm, args.max_boxcar, args.T, candname)
+    run_search(args.f, args.nt, args.max_dm, args.max_boxcar, args.T, candname, args)
 
 
 
