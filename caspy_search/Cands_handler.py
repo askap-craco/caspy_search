@@ -1,6 +1,7 @@
 import logging 
 from sklearn.cluster import DBSCAN
 import numpy as np
+from . import constants as C
 
 class Cands_handler:
     '''
@@ -9,7 +10,7 @@ class Cands_handler:
     def __init__(self, outname, clustering_eps=3):
         self.outname = outname
         self.header_inkeys = ['SNR', 'boxcar', 'DM', 'samp', 'ngroup']
-        self.header_outkeys = self.header_inkeys + ['ncluster', 'boxcar_ms', 'DM_pccc', "time_s"]
+        self.header_outkeys = self.header_inkeys + ['ncluster', 'boxcar_ms', 'DM_pccc', "time_s", "mjd_inf"]
         self.db = DBSCAN(eps=clustering_eps, min_samples=1)
         self.open_outfile()
 
@@ -23,13 +24,19 @@ class Cands_handler:
         if len(cands) > 0:
             logging.debug(f"Writing {len(cands)} cands to file")
             for cand in cands:
-                for field in cand:
-                    self.f.write(f"{field:.2f}\t")
+                for ii, field in enumerate(cand):
+                    if self.header_outkeys[ii] == 'mjd_inf':
+                        #This key is mjd_inf, so do not round off the precision to 2 digits
+                        self.f.write(f"{field:.11f}\t")
+                    elif self.header_outkeys[ii] == 'time_s':
+                        self.f.write(f"{field:.5f}\t")
+                    else:
+                        self.f.write(f"{field:.2f}\t")
                 self.f.write("\n")
         else:
             logging.debug("No cands to write")
 
-    def add_physical_units_columns(self, fbottom, df, nf, tsamp, cands):
+    def add_physical_units_columns(self, fbottom, df, nf, tsamp, mjd_start, cands):
         '''
         Convert DM, width and samp units to physical units
         Params
@@ -38,18 +45,28 @@ class Cands_handler:
         df: Channel Bandwidth (MHz)
         nf: Number of channels (int)
         tsamp: Sampling time (seconds)
+        mjd_start: MJD start of the observation (float)
+        cands : list of cands containing [SNR, boxcar, DM_samps, samp, ngroup, ncluster] values
         '''
 
         cands_arr = np.array(cands)
-        ftop = ( fbottom + nf * df ) * 1e-3     #Converting into GHz
-        fbottom *= 1e-3         #Converting into GHz
-        final_cands = np.zeros((cands_arr.shape[0], cands_arr.shape[1] + 3))
-        print("Shape of final cands is", final_cands.shape)
+        ftop = ( fbottom + nf * df ) * C.MHZ_TO_GHZ
+        fbottom *= C.MHZ_TO_GHZ
+        final_cands = np.zeros((cands_arr.shape[0], len(self.header_outkeys)))
+        #print("Shape of final cands is", final_cands.shape)
         n_in_keys = cands_arr.shape[1]
         final_cands[:, :n_in_keys] = cands_arr
-        final_cands[:, n_in_keys] = final_cands[:, 1] * tsamp * 1e3
-        final_cands[:, n_in_keys + 1] = final_cands[:, 2] * tsamp * 1e3 / 4.15 / (fbottom**-2 - ftop**-2)
-        final_cands[:, n_in_keys + 2] = final_cands[:, 3] * tsamp
+        boxcar_ms = final_cands[:, 1] * tsamp * C.S_TO_MS
+        dm_pccc = final_cands[:, 2] * tsamp * C.S_TO_MS / C.DM_CONSTANT / (fbottom**-2 - ftop**-2)
+        time_s = final_cands[:, 3] * tsamp
+        delay_inf = C.DM_CONSTANT * dm_pccc * fbottom**-2 * C.MS_TO_S
+        mjd_inf = mjd_start - delay_inf / C.S_IN_A_DAY
+
+        final_cands[:, n_in_keys] = boxcar_ms
+        final_cands[:, n_in_keys + 1] = dm_pccc
+        final_cands[:, n_in_keys + 2] = time_s
+        final_cands[:, n_in_keys + 3] = mjd_inf
+
         return final_cands
 
     def find_representative_cands(self, cands_arr, labels):

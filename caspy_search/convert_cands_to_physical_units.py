@@ -19,5 +19,6 @@ if __name__ == '__main__':
     a.add_argument('-fbottom', type=float, help="Bottom edge of band in MHz (def = 1152.5)", default=1152.5)
     a.add_argument('-df', type=float, help="BW in MHz (def = 1)", default=1)
     a.add_argument('-tsamp', type=float, help="Tsamp in seconds (default=0.00126646875)", default=0.00126646875)
+    a.add_argument('-mjd_start', type=float, help="MJD start of the observation (def=60000.0)", default = 60000.0)
     args=a.parse_args()
     main()
