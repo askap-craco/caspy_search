@@ -13,7 +13,7 @@ class LoadFilterbank(FilReader):
         self.tot_samples = self.header.nsamples
 
     def yield_block(self, nt:int = 256, start:int = 0, nsamps : int = None, skipback: int=0 ):
-        for iblock, _, block in self.read_plan(nt, start, nsamps, skipback, verbose = False):
+        for iblock, _, block in self.read_plan(nt, start, nsamps, skipback ):
             if block.size != self.nchans * nt:
                 nt_this_block = block.size // self.nchans
                 logging.info(f"Block {iblock} only has {nt_this_block} samps, ending the yield loop now")
