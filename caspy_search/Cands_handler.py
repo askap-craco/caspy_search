@@ -10,7 +10,7 @@ class Cands_handler:
     def __init__(self, outname, clustering_eps=3):
         self.outname = outname
         self.header_inkeys = ['SNR', 'boxcar', 'DM', 'samp', 'ngroup']
-        self.header_outkeys = self.header_inkeys + ['ncluster', 'boxcar_ms', 'DM_pccc', "time_s", "mjd_inf"]
+        self.header_outkeys = self.header_inkeys + ['ncluster', 'boxcar_ms', 'DM_pccc', "time_s", "mjd_inf", "mjd_lower_edge"]
         self.db = DBSCAN(eps=clustering_eps, min_samples=1)
         self.open_outfile()
 
@@ -25,8 +25,8 @@ class Cands_handler:
             logging.debug(f"Writing {len(cands)} cands to file")
             for cand in cands:
                 for ii, field in enumerate(cand):
-                    if self.header_outkeys[ii] == 'mjd_inf':
-                        #This key is mjd_inf, so do not round off the precision to 2 digits
+                    if self.header_outkeys[ii] in ['mjd_inf', 'mjd_lower_edge']:
+                        #This key is mjd, so do not round off the precision to 2 digits
                         self.f.write(f"{field:.11f}\t")
                     elif self.header_outkeys[ii] == 'time_s':
                         self.f.write(f"{field:.5f}\t")
@@ -56,16 +56,18 @@ class Cands_handler:
         #print("Shape of final cands is", final_cands.shape)
         n_in_keys = cands_arr.shape[1]
         final_cands[:, :n_in_keys] = cands_arr
-        boxcar_ms = final_cands[:, 1] * tsamp * C.S_TO_MS
+        boxcar_ms = (final_cands[:, 1]+1) * tsamp * C.S_TO_MS       #+1 because boxcar 0 means 1 sample wide
         dm_pccc = final_cands[:, 2] * tsamp * C.S_TO_MS / C.DM_CONSTANT / (fbottom**-2 - ftop**-2)
         time_s = final_cands[:, 3] * tsamp
         delay_inf = C.DM_CONSTANT * dm_pccc * fbottom**-2 * C.MS_TO_S
-        mjd_inf = mjd_start - delay_inf / C.S_IN_A_DAY
+        mjd_inf = mjd_start + (time_s - delay_inf) / C.S_IN_A_DAY 
+        mjd_lower_edge = mjd_start + time_s / C.S_IN_A_DAY
 
         final_cands[:, n_in_keys] = boxcar_ms
         final_cands[:, n_in_keys + 1] = dm_pccc
         final_cands[:, n_in_keys + 2] = time_s
         final_cands[:, n_in_keys + 3] = mjd_inf
+        final_cands[:, n_in_keys + 4] = mjd_lower_edge
 
         return final_cands
 
