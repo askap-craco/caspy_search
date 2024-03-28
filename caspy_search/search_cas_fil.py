@@ -45,7 +45,7 @@ def run_search(fil_name, nt, max_dm, max_boxcar, threshold, candfile, args):
     ch = Cands_handler(outname = candfile, clustering_eps = args.cl_eps)
     all_cands = []
     max_cands_per_block = max_dm * nt // 2 
-    for iblock, block in enumerate(f.yield_block(nt, start, nsamps)):
+    for iblock, block in enumerate(f.yield_block(nt, start, nsamps, flip_band = args.flip_band)):
         start_time = time.time()
         logging.info(f"Processing block {iblock}")
         if args.plot:
@@ -132,6 +132,7 @@ def get_parser():
     a.add_argument("-log_level", type=str, help="Logging level - [CRITICAL/INFO/DEBUG] (def = DEBUG)", default="DEBUG")
     a.add_argument("-clf", type=int, help="How many blocks to accumulate before clustering (def = 5)", default=5)
     a.add_argument("-plot", action='store_true', help="Plot the different stages of processing for each block?", default=False)
+    a.add_argument("-flip_band", action='store_true', help="Flip the data along freq axis (def:False)", default=False)
     a.add_argument("-keep_last_boxcar", action='store_true', help="Dont discard cands in the highest boxcar trial", default=False)
     a.add_argument("-cl_eps", type=float, help="Clustering eps (def=2.5)", default=2.5)
     g1 = a.add_mutually_exclusive_group()
