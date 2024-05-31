@@ -8,11 +8,12 @@ class LoadFilterbank(FilReader):
         self.ftop = np.max(self.header.chan_freqs) + np.abs(self.header.foff) / 2
         self.fbottom = np.min(self.header.chan_freqs) - np.abs(self.header.foff) / 2
         self.df = np.abs(self.header.foff)
+        self.needs_flipping = self.header.foff < 0
         self.nchans = self.header.nchans
         self.tsamp = self.header.tsamp
         self.tot_samples = self.header.nsamples
 
-    def yield_block(self, nt:int = 256, start:int = 0, nsamps : int = None, skipback: int=0 ):
+    def yield_block(self, nt:int = 256, start:int = 0, nsamps : int = None, skipback: int=0 , flip_band:bool=False):
         for iblock, _, block in self.read_plan(nt, start, nsamps, skipback ):
             if block.size != self.nchans * nt:
                 nt_this_block = block.size // self.nchans
@@ -22,7 +23,10 @@ class LoadFilterbank(FilReader):
                 nt_this_block = nt
 
             outblock = block.reshape(nt_this_block, -1).T
-            if self.df < 0:
+            if flip_band:
+                outblock = outblock[::-1, :]
+                logging.debug("Flipping the band because it was asked for")
+            if self.needs_flipping:
                 logging.debug("The channel bandwidth is positive --- flipping the data")
                 yield outblock[::-1, :]
             else:
