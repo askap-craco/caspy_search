@@ -29,7 +29,7 @@ class Cands_handler:
             for cand in cands:
                 for ii, field in enumerate(cand):
                     if ii > 0:
-                        self.f.write("t")
+                        self.f.write("\t")
 
                     if self.header_outkeys[ii] in ['mjd_inf', 'mjd_lower_edge']:
                         #This key is mjd, so do not round off the precision to 2 digits
