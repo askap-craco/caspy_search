@@ -16,8 +16,11 @@ class Cands_handler:
 
     def open_outfile(self):
         self.f = open(self.outname, 'w')
-        for key in self.header_outkeys:
-            self.f.write(key + "\t")
+        for ik, key in enumerate(self.header_outkeys):
+            if ik == 0:
+                self.f.write(key)
+            else:
+                self.f.write("\t" + key)
         self.f.write("\n")
     
     def write_cands(self, cands):
@@ -25,13 +28,17 @@ class Cands_handler:
             logging.debug(f"Writing {len(cands)} cands to file")
             for cand in cands:
                 for ii, field in enumerate(cand):
+                    if ii > 0:
+                        self.f.write("t")
+
                     if self.header_outkeys[ii] in ['mjd_inf', 'mjd_lower_edge']:
                         #This key is mjd, so do not round off the precision to 2 digits
-                        self.f.write(f"{field:.11f}\t")
+                        self.f.write(f"{field:.11f}")
                     elif self.header_outkeys[ii] == 'time_s':
-                        self.f.write(f"{field:.5f}\t")
+                        self.f.write(f"{field:.5f}")
                     else:
-                        self.f.write(f"{field:.2f}\t")
+                        self.f.write(f"{field:.2f}")
+
                 self.f.write("\n")
         else:
             logging.debug("No cands to write")
